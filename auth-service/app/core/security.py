@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, Optional, Union
 import secrets
 
-from jose import jwt 
+from jose import jwt, JWTError
 from passlib.context import CryptContext
 
 from app.core.config import settings
