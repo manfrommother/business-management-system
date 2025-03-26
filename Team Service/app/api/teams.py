@@ -70,7 +70,7 @@ async def get_user_teams_list(
 async def get_team_info(
     team_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _: uuid.UUID = Depends(get_team_member(team_id))  # Проверка, что пользователь состоит в команде
+    _: uuid.UUID = Depends(get_team_member())  # Проверка, что пользователь состоит в команде
 ):
     """Получение информации о команде"""
     # Попытка получить из кэша
@@ -99,7 +99,7 @@ async def update_team_info(
     team_data: TeamUpdate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    _: uuid.UUID = Depends(check_team_admin(team_id))  # Проверка, что пользователь админ команды
+    _: uuid.UUID = Depends(check_team_admin())  # Проверка, что пользователь админ команды
 ):
     """Обновление информации о команде"""
     updated_team = update_team(db, team_id, team_data)
@@ -130,7 +130,7 @@ async def delete_team_by_id(
     team_id: uuid.UUID,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user_id: uuid.UUID = Depends(check_team_admin(team_id))  # Проверка, что пользователь админ команды
+    current_user_id: uuid.UUID = Depends(check_team_admin())  # Проверка, что пользователь админ команды
 ):
     """Пометка команды как удаленной"""
     deleted_team = delete_team(db, team_id)
@@ -162,7 +162,7 @@ async def create_invite_code(
     invite_data: TeamInviteCreate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user_id: uuid.UUID = Depends(check_team_admin(team_id))  # Проверка, что пользователь админ команды
+    current_user_id: uuid.UUID = Depends(check_team_admin())  # Проверка, что пользователь админ команды
 ):
     """Создание инвайт-кода для приглашения в команду"""
     # Проверка существования команды

@@ -14,7 +14,7 @@ from app.schemas.member import (
 )
 from app.dependencies import check_team_admin, get_team_member
 from app.services.user_service import get_user_info
-from app.db.models import MemberRole
+from app.db.models import MemberRole, TeamMember
 
 router = APIRouter()
 
@@ -25,7 +25,7 @@ async def add_team_member(
     member_data: TeamMemberCreate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user_id: uuid.UUID = Depends(check_team_admin(team_id))  # Проверка, что пользователь админ команды
+    current_user_id: uuid.UUID = Depends(check_team_admin())  # Проверка, что пользователь админ команды
 ):
     """Добавление нового участника в команду"""
     # Проверка существования команды
@@ -80,7 +80,7 @@ async def add_team_member(
 async def get_members_list(
     team_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _: uuid.UUID = Depends(get_team_member(team_id))  # Проверка, что пользователь состоит в команде
+    _: uuid.UUID = Depends(get_team_member())  # Проверка, что пользователь состоит в команде
 ):
     """Получение списка всех участников команды"""
     members = get_team_members(db, team_id)
@@ -106,7 +106,7 @@ async def get_team_member_info(
     team_id: uuid.UUID,
     user_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _: uuid.UUID = Depends(get_team_member(team_id))  # Проверка, что пользователь состоит в команде
+    _: uuid.UUID = Depends(get_team_member())  # Проверка, что пользователь состоит в команде
 ):
     """Получение информации об участнике команды"""
     member = get_member_by_user_and_team(db, user_id, team_id)
@@ -139,7 +139,7 @@ async def update_team_member_info(
     member_data: TeamMemberUpdate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user_id: uuid.UUID = Depends(check_team_admin(team_id))  # Проверка, что пользователь админ команды
+    current_user_id: uuid.UUID = Depends(check_team_admin())  # Проверка, что пользователь админ команды
 ):
     """Обновление информации об участнике команды"""
     # Получаем информацию об участнике
@@ -180,7 +180,7 @@ async def remove_team_member(
     user_id: uuid.UUID,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user_id: uuid.UUID = Depends(check_team_admin(team_id))  # Проверка, что пользователь админ команды
+    current_user_id: uuid.UUID = Depends(check_team_admin())  # Проверка, что пользователь админ команды
 ):
     """Удаление участника из команды"""
     # Проверка, что удаляемый пользователь не является последним администратором

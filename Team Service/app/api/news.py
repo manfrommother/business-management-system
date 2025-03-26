@@ -25,7 +25,7 @@ async def create_news(
     news_data: TeamNewsCreate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user_id: uuid.UUID = Depends(get_team_member(team_id))  # Проверка, что пользователь состоит в команде
+    current_user_id: uuid.UUID = Depends(get_team_member())  # Проверка, что пользователь состоит в команде
 ):
     """Создание новости в команде"""
     # Проверка существования команды
@@ -84,7 +84,7 @@ async def get_news_list(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
-    _: uuid.UUID = Depends(get_team_member(team_id))  # Проверка, что пользователь состоит в команде
+    _: uuid.UUID = Depends(get_team_member())  # Проверка, что пользователь состоит в команде
 ):
     """Получение списка новостей команды"""
     # Проверка существования отдела, если указан
@@ -119,7 +119,7 @@ async def get_news_details(
     team_id: uuid.UUID,
     news_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _: uuid.UUID = Depends(get_team_member(team_id))  # Проверка, что пользователь состоит в команде
+    _: uuid.UUID = Depends(get_team_member())  # Проверка, что пользователь состоит в команде
 ):
     """Получение детальной информации о новости"""
     # Получаем новость
@@ -147,7 +147,7 @@ async def update_news_info(
     news_data: TeamNewsUpdate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user_id: uuid.UUID = Depends(get_team_member(team_id))  # Проверка, что пользователь состоит в команде
+    current_user_id: uuid.UUID = Depends(get_team_member())  # Проверка, что пользователь состоит в команде
 ):
     """Обновление новости"""
     # Получаем новость
@@ -203,7 +203,7 @@ async def delete_news_by_id(
     news_id: uuid.UUID,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user_id: uuid.UUID = Depends(get_team_member(team_id))  # Проверка, что пользователь состоит в команде
+    current_user_id: uuid.UUID = Depends(get_team_member())  # Проверка, что пользователь состоит в команде
 ):
     """Удаление новости"""
     # Получаем новость

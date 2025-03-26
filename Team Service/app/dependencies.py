@@ -9,7 +9,7 @@ from app.db.session import get_db
 from app.config import settings
 from app.schemas.token import TokenPayload
 from app.db.crud import get_member_by_user_and_team
-from app.db.models import MemberRole
+from app.db.models import MemberRole, TeamMember
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/login")
 
@@ -67,10 +67,11 @@ async def get_current_user_from_token(token: str = Depends(oauth2_scheme)):
         raise credentials_exception
 
 
-def get_team_member(team_id: uuid.UUID):
+def get_team_member():
     """Фабрика зависимостей для проверки членства пользователя в команде"""
     
     async def _get_team_member(
+        team_id: uuid.UUID,
         current_user_id: uuid.UUID = Depends(get_current_user_id),
         db: Session = Depends(get_db)
     ) -> uuid.UUID:
@@ -85,10 +86,11 @@ def get_team_member(team_id: uuid.UUID):
     return _get_team_member
 
 
-def check_team_admin(team_id: uuid.UUID):
+def check_team_admin():
     """Фабрика зависимостей для проверки, является ли пользователь администратором команды"""
     
     async def _check_team_admin(
+        team_id: uuid.UUID,
         current_user_id: uuid.UUID = Depends(get_current_user_id),
         db: Session = Depends(get_db)
     ) -> uuid.UUID:
@@ -103,10 +105,11 @@ def check_team_admin(team_id: uuid.UUID):
     return _check_team_admin
 
 
-def check_team_manager(team_id: uuid.UUID):
+def check_team_manager():
     """Фабрика зависимостей для проверки, является ли пользователь менеджером или администратором команды"""
     
     async def _check_team_manager(
+        team_id: uuid.UUID,
         current_user_id: uuid.UUID = Depends(get_current_user_id),
         db: Session = Depends(get_db)
     ) -> uuid.UUID:

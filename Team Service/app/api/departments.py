@@ -24,7 +24,7 @@ async def create_new_department(
     department_data: DepartmentCreate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    _: uuid.UUID = Depends(check_team_admin(team_id))  # Проверка, что пользователь админ команды
+    _: uuid.UUID = Depends(check_team_admin())  # Проверка, что пользователь админ команды
 ):
     """Создание нового отдела в команде"""
     # Проверка существования команды
@@ -63,7 +63,7 @@ async def create_new_department(
 async def get_team_departments(
     team_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _: uuid.UUID = Depends(get_team_member(team_id))  # Проверка, что пользователь состоит в команде
+    _: uuid.UUID = Depends(get_team_member())  # Проверка, что пользователь состоит в команде
 ):
     """Получение списка всех отделов команды"""
     return get_departments_by_team(db, team_id)
@@ -73,7 +73,7 @@ async def get_team_departments(
 async def get_organization_structure(
     team_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _: uuid.UUID = Depends(get_team_member(team_id))  # Проверка, что пользователь состоит в команде
+    _: uuid.UUID = Depends(get_team_member())  # Проверка, что пользователь состоит в команде
 ):
     """Получение полной организационной структуры команды"""
     # Проверка существования команды
@@ -120,7 +120,7 @@ async def get_department_info(
     team_id: uuid.UUID,
     department_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _: uuid.UUID = Depends(get_team_member(team_id))  # Проверка, что пользователь состоит в команде
+    _: uuid.UUID = Depends(get_team_member())  # Проверка, что пользователь состоит в команде
 ):
     """Получение информации об отделе"""
     department = get_department_by_id(db, department_id)
@@ -140,7 +140,7 @@ async def update_department_info(
     department_data: DepartmentUpdate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    _: uuid.UUID = Depends(check_team_admin(team_id))  # Проверка, что пользователь админ команды
+    _: uuid.UUID = Depends(check_team_admin())  # Проверка, что пользователь админ команды
 ):
     """Обновление информации об отделе"""
     # Проверка существования отдела
@@ -205,7 +205,7 @@ async def delete_department_by_id(
     department_id: uuid.UUID,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user_id: uuid.UUID = Depends(check_team_admin(team_id))  # Проверка, что пользователь админ команды
+    current_user_id: uuid.UUID = Depends(check_team_admin())  # Проверка, что пользователь админ команды
 ):
     """Удаление отдела"""
     # Проверка существования отдела
