@@ -183,8 +183,11 @@ async def remove_team_member(
     current_user_id: uuid.UUID = Depends(check_team_admin())  # Проверка, что пользователь админ команды
 ):
     """Удаление участника из команды"""
+    logger.info(f"Попытка удаления участника {user_id} из команды {team_id}")
+    
     # Проверка, что удаляемый пользователь не является последним администратором
     if str(user_id) == str(current_user_id):
+        logger.debug(f"Пользователь {user_id} пытается удалить себя из команды {team_id}")
         # Проверяем, есть ли другие администраторы в команде
         admin_count = db.query(TeamMember).filter(
             TeamMember.team_id == team_id,
@@ -193,6 +196,9 @@ async def remove_team_member(
         ).count()
         
         if admin_count <= 1:
+            logger.warning(
+                f"Попытка удаления последнего администратора {user_id} из команды {team_id}"
+            )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Невозможно удалить последнего администратора команды"
@@ -201,6 +207,7 @@ async def remove_team_member(
     # Получаем информацию об участнике
     member = get_member_by_user_and_team(db, user_id, team_id)
     if not member:
+        logger.error(f"Участник {user_id} не найден в команде {team_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Участник не найден"
@@ -209,10 +216,13 @@ async def remove_team_member(
     # Удаляем участника
     success = delete_team_member(db, member.id)
     if not success:
+        logger.error(f"Ошибка при удалении участника {user_id} из команды {team_id}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Не удалось удалить участника"
         )
+    
+    logger.info(f"Участник {user_id} успешно удален из команды {team_id}")
     
     # Публикация события удаления участника
     from app.services.messaging import rabbitmq_service
