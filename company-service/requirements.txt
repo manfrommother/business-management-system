@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+pydantic[email]
+python-jose[cryptography]
+passlib[bcrypt]
+alembic
+python-multipart
+redis
+pika
+
+# Для разработки и документации (опционально)
+# httpx # Для асинхронных клиентских запросов (если нужно)
+# pytest # Для тестов
+# coverage # Для покрытия кода тестами 
