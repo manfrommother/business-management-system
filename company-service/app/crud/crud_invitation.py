@@ -75,6 +75,17 @@ class CRUDInvitation:
         db.refresh(db_obj)
         return db_obj
 
+    def count_pending_by_company(self, db: Session, *, company_id: int) -> int:
+        """Подсчитать количество ожидающих приглашений для компании."""
+        # Также учитываем срок действия
+        now_aware = datetime.now(timezone.utc)
+        return db.query(Invitation).filter(
+            Invitation.company_id == company_id,
+            Invitation.status == InvitationStatus.PENDING,
+            (Invitation.expires_at == None) | (Invitation.expires_at > now_aware),
+            (Invitation.usage_limit == None) | (Invitation.times_used < Invitation.usage_limit)
+        ).count()
+
     # TODO: Методы для отзыва (revoke), возможно, листинга приглашений
 
 # Экземпляр CRUD для Invitation

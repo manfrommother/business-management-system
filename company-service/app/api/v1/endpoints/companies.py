@@ -215,4 +215,64 @@ def create_invitation(
         company_id=company.id,
         created_by_user_id=current_user_id # ЗАГЛУШКА
     )
-    return invitation 
+    return invitation
+
+# --- Эндпоинты для Статистики --- #
+
+@router.get(
+    "/{company_id}/stats",
+    response_model=schemas.CompanyStats,
+    summary="Получить статистику по компании",
+    description="Возвращает основные статистические показатели для компании.",
+    # TODO: Права: администратор компании
+)
+def get_company_stats(
+    *,
+    db: Session = Depends(get_db),
+    company: models.Company = Depends(get_company_or_404),
+    # current_user: models.User = Depends(deps.get_current_company_admin(company_id)) # Пример
+) -> Any:
+    """
+    Получить статистику:
+    - Общее количество активных участников.
+    - Количество активных приглашений.
+    - Количество опубликованных новостей.
+    - Распределение активных участников по отделам.
+    """
+    # TODO: Проверка прав
+
+    total_members = crud.crud_membership.count_active_by_company(db=db, company_id=company.id)
+    pending_invitations = crud.crud_invitation.count_pending_by_company(db=db, company_id=company.id)
+    published_news = crud.crud_news.count_published_by_company(db=db, company_id=company.id)
+
+    # Получаем распределение по ID отделов
+    member_distribution_raw = crud.crud_membership.get_distribution_by_department(db=db, company_id=company.id)
+
+    # Получаем информацию об отделах, чтобы добавить имена
+    department_ids = [dept_id for dept_id in member_distribution_raw.keys() if dept_id != -1] # Исключаем "без отдела"
+    departments = {}
+    if department_ids:
+        department_models = db.query(models.Department).filter(
+            models.Department.company_id == company.id,
+            models.Department.id.in_(department_ids)
+        ).all()
+        departments = {dept.id: dept.name for dept in department_models}
+
+    # Формируем финальный список распределения
+    members_by_department_list: List[schemas.DepartmentMemberCount] = []
+    for dept_id, count in member_distribution_raw.items():
+        dept_name = departments.get(dept_id, "Без отдела") # Используем имя или "Без отдела"
+        members_by_department_list.append(
+            schemas.DepartmentMemberCount(
+                department_id=dept_id if dept_id != -1 else None, # None вместо -1 для схемы
+                department_name=dept_name,
+                member_count=count
+            )
+        )
+
+    return schemas.CompanyStats(
+        total_members=total_members,
+        pending_invitations=pending_invitations,
+        published_news=published_news,
+        members_by_department=members_by_department_list
+    ) 

@@ -111,5 +111,15 @@ class CRUDNews:
             db.refresh(db_obj)
         return db_obj
 
+    def count_published_by_company(self, db: Session, *, company_id: int) -> int:
+        """Подсчитать количество опубликованных и неархивных новостей."""
+        now_aware = datetime.now(timezone.utc)
+        return db.query(News).filter(
+            News.company_id == company_id,
+            News.is_archived == False,
+            News.is_published == True,
+            (News.published_at == None) | (News.published_at <= now_aware)
+        ).count()
+
 # Экземпляр CRUD для News
 crud_news = CRUDNews() 

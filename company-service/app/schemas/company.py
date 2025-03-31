@@ -1,6 +1,6 @@
 # company-service/app/schemas/company.py
 
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 from pydantic import BaseModel, Field, HttpUrl
 
@@ -50,4 +50,16 @@ class CompanyInList(BaseModel):
     status: CompanyStatus
     logo_url: Optional[HttpUrl] = None
 
-    model_config = {"from_attributes": True} 
+    model_config = {"from_attributes": True}
+
+# Схема для возврата статистики по компании
+class DepartmentMemberCount(BaseModel):
+    department_id: Optional[int] # -1 для сотрудников без отдела
+    department_name: str
+    member_count: int
+
+class CompanyStats(BaseModel):
+    total_members: int = Field(..., description="Общее количество активных участников")
+    pending_invitations: int = Field(..., description="Количество активных приглашений")
+    published_news: int = Field(..., description="Количество опубликованных новостей")
+    members_by_department: List[DepartmentMemberCount] = Field(..., description="Распределение участников по отделам") 
