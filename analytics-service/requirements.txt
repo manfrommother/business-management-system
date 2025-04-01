@@ -15,6 +15,9 @@ aio-pika>=9.0.0,<9.5.0
 python-jose[cryptography]>=3.3.0,<3.4.0
 passlib[bcrypt]>=1.7.4,<1.8.0
 
+# Admin Interface
+sqladmin>=0.14.0,<0.17.0
+
 # Optional: ClickHouse
 # clickhouse-connect>=0.5.0,<0.8.0
 
