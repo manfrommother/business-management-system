@@ -1,0 +1,3 @@
+# task-service/alembic/versions/.gitkeep
+# Эта папка хранит файлы миграций Alembic.
+# Файл .gitkeep нужен, чтобы Git отслеживал пустую директорию. 
