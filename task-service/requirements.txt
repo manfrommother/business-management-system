@@ -1,0 +1,25 @@
+# task-service/requirements.txt
+
+fastapi
+uvicorn[standard]
+
+# Database
+sqlalchemy
+psycopg2-binary # PostgreSQL driver
+alembic
+
+# Pydantic & Settings
+pydantic
+pydantic-settings
+
+# Security (JWT)
+python-jose[cryptography]
+passlib[bcrypt]
+
+# Utilities
+python-dotenv # For loading .env file
+
+# Messaging
+pika # RabbitMQ client
+
+# Add other dependencies as needed 
