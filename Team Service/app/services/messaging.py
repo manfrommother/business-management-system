@@ -1,46 +1,78 @@
 import json
 import logging
 import aio_pika
-from typing import Dict, Any
+import asyncio
+from typing import Dict, Any, Optional
+from functools import lru_cache
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Константы
+EXCHANGE_NAME = "team_events"
+EVENT_TYPE_FIELD = "event"
+
+# Кастомный JSON энкодер для datetime
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
 
 class RabbitMQService:
     def __init__(self):
-        self.connection = None
-        self.channel = None
-        self.exchange = None
+        """Инициализация сервиса RabbitMQ"""
+        self.connection: Optional[aio_pika.Connection] = None
+        self.channel: Optional[aio_pika.Channel] = None
+        self.exchange: Optional[aio_pika.Exchange] = None
+        self._is_connecting = False
+        self._connection_lock = asyncio.Lock()
     
     async def connect(self):
         """Подключение к RabbitMQ"""
         if self.connection is None or self.connection.is_closed:
-            logger.info("Подключение к RabbitMQ...")
-            try:
-                self.connection = await aio_pika.connect_robust(
-                    host=settings.RABBITMQ_HOST,
-                    port=int(settings.RABBITMQ_PORT),
-                    login=settings.RABBITMQ_USER,
-                    password=settings.RABBITMQ_PASSWORD
-                )
-                self.channel = await self.connection.channel()
-                self.exchange = await self.channel.declare_exchange(
-                    "team_events", aio_pika.ExchangeType.TOPIC
-                )
-                logger.info("Подключено к RabbitMQ")
-            except Exception as e:
-                logger.error(f"Ошибка подключения к RabbitMQ: {str(e)}")
-                self.connection = None
-                self.channel = None
-                self.exchange = None
-                raise
+            # Защита от гонки при параллельных вызовах connect()
+            async with self._connection_lock:
+                if self._is_connecting:
+                    logger.debug("Подключение к RabbitMQ уже выполняется, ожидание...")
+                    return
+                
+                self._is_connecting = True
+                try:
+                    logger.info("Подключение к RabbitMQ...")
+                    try:
+                        self.connection = await aio_pika.connect_robust(
+                            host=settings.RABBITMQ_HOST,
+                            port=int(settings.RABBITMQ_PORT),
+                            login=settings.RABBITMQ_USER,
+                            password=settings.RABBITMQ_PASSWORD
+                        )
+                        self.channel = await self.connection.channel()
+                        self.exchange = await self.channel.declare_exchange(
+                            EXCHANGE_NAME, aio_pika.ExchangeType.TOPIC
+                        )
+                        logger.info("Подключено к RabbitMQ")
+                    except aio_pika.exceptions.AMQPException as e:
+                        logger.error(f"Ошибка подключения к RabbitMQ: {str(e)}")
+                        self._reset_connection()
+                        raise
+                finally:
+                    self._is_connecting = False
+        else:
+            logger.debug("Соединение с RabbitMQ уже установлено")
+    
+    def _reset_connection(self):
+        """Сброс всех полей соединения"""
+        self.connection = None
+        self.channel = None
+        self.exchange = None
     
     async def close(self):
         """Закрытие соединения с RabbitMQ"""
         if self.connection and not self.connection.is_closed:
             await self.connection.close()
             logger.info("Отключено от RabbitMQ")
+            self._reset_connection()
     
     async def publish_message(self, routing_key: str, message: Dict[str, Any]):
         """Публикация сообщения в RabbitMQ"""
@@ -48,7 +80,11 @@ class RabbitMQService:
             await self.connect()
         
         try:
-            message_body = json.dumps(message).encode()
+            # Добавляем тип события, если его нет
+            if EVENT_TYPE_FIELD not in message:
+                message[EVENT_TYPE_FIELD] = routing_key.split('.')[-1]
+                
+            message_body = json.dumps(message, cls=DateTimeEncoder).encode()
             await self.exchange.publish(
                 aio_pika.Message(
                     body=message_body,
@@ -59,7 +95,7 @@ class RabbitMQService:
             logger.info(f"Опубликовано сообщение по ключу маршрутизации {routing_key}")
             return True
         except Exception as e:
-            logger.error(f"Ошибка публикации сообщения: {str(e)}")
+            logger.critical(f"Критическая ошибка публикации сообщения: {str(e)}")
             return False
     
     # === Team Events ===
@@ -72,7 +108,7 @@ class RabbitMQService:
                 "team_id": team_id,
                 "team_name": team_name,
                 "creator_id": creator_id,
-                "event": "created"
+                EVENT_TYPE_FIELD: "created"
             }
         )
     
@@ -83,7 +119,7 @@ class RabbitMQService:
             {
                 "team_id": team_id,
                 "updated_fields": updated_fields,
-                "event": "updated"
+                EVENT_TYPE_FIELD: "updated"
             }
         )
     
@@ -94,7 +130,7 @@ class RabbitMQService:
             {
                 "team_id": team_id,
                 "deleted_by": deleted_by,
-                "event": "deleted"
+                EVENT_TYPE_FIELD: "deleted"
             }
         )
     
@@ -108,7 +144,7 @@ class RabbitMQService:
                 "team_id": team_id,
                 "department_id": department_id,
                 "department_name": department_name,
-                "event": "created"
+                EVENT_TYPE_FIELD: "created"
             }
         )
     
@@ -120,7 +156,7 @@ class RabbitMQService:
                 "team_id": team_id,
                 "department_id": department_id,
                 "updated_fields": updated_fields,
-                "event": "updated"
+                EVENT_TYPE_FIELD: "updated"
             }
         )
     
@@ -131,7 +167,7 @@ class RabbitMQService:
             {
                 "team_id": team_id,
                 "department_id": department_id,
-                "event": "deleted"
+                EVENT_TYPE_FIELD: "deleted"
             }
         )
     
@@ -145,7 +181,7 @@ class RabbitMQService:
                 "team_id": team_id,
                 "user_id": user_id,
                 "role": role,
-                "event": "added"
+                EVENT_TYPE_FIELD: "added"
             }
         )
     
@@ -157,7 +193,7 @@ class RabbitMQService:
                 "team_id": team_id,
                 "user_id": user_id,
                 "updated_fields": updated_fields,
-                "event": "updated"
+                EVENT_TYPE_FIELD: "updated"
             }
         )
     
@@ -168,7 +204,7 @@ class RabbitMQService:
             {
                 "team_id": team_id,
                 "user_id": user_id,
-                "event": "removed"
+                EVENT_TYPE_FIELD: "removed"
             }
         )
     
@@ -180,7 +216,7 @@ class RabbitMQService:
                 "team_id": team_id,
                 "user_id": user_id,
                 "role": role,
-                "event": "joined"
+                EVENT_TYPE_FIELD: "joined"
             }
         )
     
@@ -194,7 +230,7 @@ class RabbitMQService:
                 "team_id": team_id,
                 "news_id": news_id,
                 "news_title": news_title,
-                "event": "created"
+                EVENT_TYPE_FIELD: "created"
             }
         )
     
@@ -206,7 +242,7 @@ class RabbitMQService:
                 "team_id": team_id,
                 "news_id": news_id,
                 "news_title": news_title,
-                "event": "updated"
+                EVENT_TYPE_FIELD: "updated"
             }
         )
     
@@ -217,10 +253,16 @@ class RabbitMQService:
             {
                 "team_id": team_id,
                 "news_id": news_id,
-                "event": "deleted"
+                EVENT_TYPE_FIELD: "deleted"
             }
         )
 
 
-# Создание синглтон-экземпляра
-rabbitmq_service = RabbitMQService()
+# Создание синглтон-экземпляра с использованием lru_cache
+@lru_cache()
+def get_rabbitmq_service() -> RabbitMQService:
+    """Получение синглтон-экземпляра RabbitMQService"""
+    return RabbitMQService()
+
+# Для обратной совместимости
+rabbitmq_service = get_rabbitmq_service()

@@ -98,8 +98,8 @@ class RedisService:
         key = f"user:{user_id}:profile"
         return await self.get_json(key)
     
-    async def invalidate_user_cache(self, user_id: str) -> bool:
-        """Инвалидирует все кэшированные данные пользователя"""
+    async def clear_cached_user_profile(self, user_id: str) -> bool:
+        """Инвалидирует (удаляет) все кэшированные данные профиля пользователя"""
         if self.redis is None:
             await self.connect()
         
